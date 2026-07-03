@@ -1,0 +1,32 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cmake",
+            "label": "CMake: Build",
+            "command": "build",
+            "targets": [
+                "all"
+            ],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake 模板 生成 任务"
+        },
+        {
+            "label": "Flash: OpenOCD",
+            "type": "shell",
+            "command": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
+            "args": [
+                "-f",
+                "interface/stlink.cfg",
+                "-f",
+                "target/stm32f4x.cfg",
+                "-c",
+                "program build/dart_mcu.elf verify reset exit"
+            ],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "使用 OpenOCD 直接烧录 build/dart_mcu.elf"
+        }
+    ]
+}
