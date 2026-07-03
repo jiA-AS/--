@@ -65,8 +65,8 @@ void StartDefaultTask(void *argument)
 
   /* 目标电流 */
   int16_t target_2006 = 5000;   /* M2006: 50% */
-  int16_t target_3508_2 = 8000; /* M3508 #1: ~50% */
-  int16_t target_3508_3 = 8000; /* M3508 #2: ~50% */
+  int16_t target_3508_2 = 2000; /* M3508 #1: ~50% */
+  int16_t target_3508_3 = 0; /* M3508 #2: ~50% */
 
   for(;;)
   {
