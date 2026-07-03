@@ -32,7 +32,8 @@ typedef enum {
 typedef struct {
     uint8_t     motor_id;           /* 电机 CAN ID (1-8) */
     int16_t     max_current;        /* 最大电流 (0-10000) */
-    int16_t     target_current;     /* 目标电流 */
+    int16_t     target_current;     /* 目标电流（你要它转的电流） */
+    int16_t     current_current;    /* 当前实际电流（CAN反馈回来的） */
     int16_t     current_velocity;   /* 当前速度 (RPM) */
     int16_t     current_angle;      /* 当前角度 (0-8191) */
     int32_t     current_round;      /* 当前圈数 */

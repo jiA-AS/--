@@ -16,6 +16,7 @@ void M2006_Init(M2006_HandleTypeDef *hm2006, uint8_t id, int16_t max_current)
     hm2006->motor_id = id;
     hm2006->max_current = max_current;
     hm2006->target_current = 0;
+    hm2006->current_current = 0;
     hm2006->current_velocity = 0;
     hm2006->current_angle = 0;
     hm2006->current_round = 0;
@@ -33,10 +34,6 @@ void M2006_SetCurrent(M2006_HandleTypeDef *hm2006, int16_t current)
         current = hm2006->max_current;
     else if (current < -hm2006->max_current)
         current = -hm2006->max_current;
-    
-    /* 如果电机已断开，不允许设置电流 */
-    if (hm2006->state == M2006_DISCONNECTED)
-        return;
     
     /* 如果电机处于 IDLE 状态，切换到 RUNNING */
     if (hm2006->state == M2006_IDLE)
@@ -56,6 +53,9 @@ void M2006_DecodeCAN(M2006_HandleTypeDef *hm2006, uint8_t *data)
     
     /* 解码速度 (RPM) */
     hm2006->current_velocity = (data[2] << 8) | data[3];
+    
+    /* 解码当前实际电流 */
+    hm2006->current_current = (data[4] << 8) | data[5];
     
     /* 更新时间戳 */
     hm2006->last_update_tick = HAL_GetTick();
@@ -85,12 +85,10 @@ int16_t M2006_GetTargetCurrent(M2006_HandleTypeDef *hm2006)
     /* 检查是否超时断开 */
     if (now - hm2006->last_update_tick > M2006_DISCONNECT_TIMEOUT) {
         hm2006->state = M2006_DISCONNECTED;
-    } else if (hm2006->state == M2006_DISCONNECTED) {
-        hm2006->state = M2006_IDLE;
     }
     
-    /* 如果电机不在 RUNNING 状态，返回 0 */
-    if (hm2006->state != M2006_RUNNING) {
+    /* 如果电机已断开，返回 0 */
+    if (hm2006->state == M2006_DISCONNECTED) {
         hm2006->target_current = 0;
     }
     
