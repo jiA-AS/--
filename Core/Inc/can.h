@@ -44,7 +44,8 @@ void MX_CAN1_Init(void);
 void MX_CAN2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+/* 通过 CAN1 发送电机电流控制帧 (ID: 0x200) */
+void CAN1_SendMotorCurrent(int16_t currents[4]);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
@@ -52,4 +53,3 @@ void MX_CAN2_Init(void);
 #endif
 
 #endif /* __CAN_H__ */
-

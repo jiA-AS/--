@@ -1,7 +1,9 @@
 {
-    "cmake.cmakePath": "cmake",
+    "cmake.cmakePath": "cube-cmake",
     "cmake.generator": "Ninja",
-    "cmake.configureArgs": [],
+    "cmake.configureArgs": [
+        "-DCMAKE_COMMAND=cube-cmake"
+    ],
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureSettings": {
         "CMAKE_C_COMPILER": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gcc.exe",
@@ -11,5 +13,14 @@
         "CMAKE_OBJCOPY": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-objcopy.exe",
         "CMAKE_OBJDUMP": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-objdump.exe",
         "CMAKE_SIZE": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-size.exe"
-    }
+    },
+    "stm32cube-ide-clangd.path": "cube",
+    "stm32cube-ide-clangd.arguments": [
+        "starm-clangd",
+        "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gcc*",
+        "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-g++*"
+    ],
+    "cmake.preferredGenerators": [
+        "Ninja"
+    ]
 }

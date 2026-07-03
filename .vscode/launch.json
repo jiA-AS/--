@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "STM32 Debug (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dart_mcu.elf",
+            "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
+            "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
+            "searchDir": [
+                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
+            ],
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "device": "STM32F427IIHx",
+            "interface": "swd",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "CMake: Build",
+            "showDevDebugOutput": "raw",
+            "rtos": "FreeRTOS"
+        },
+        {
+            "name": "Flash Only (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dart_mcu.elf",
+            "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
+            "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
+            "searchDir": [
+                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
+            ],
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "device": "STM32F427IIHx",
+            "interface": "swd",
+            "showDevDebugOutput": "raw",
+            "rtos": "FreeRTOS"
+        }
+    ]
+}

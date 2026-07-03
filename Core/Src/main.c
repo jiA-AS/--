@@ -29,7 +29,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "motor_M2006.h"
+#include "motor_M3508.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +51,11 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+/* M2006 电机句柄 (CAN ID = 1, 最大电流 10000) */
+M2006_HandleTypeDef hm2006;
 
+/* M3508 电机句柄 (CAN ID = 2, 最大电流 16384) */
+M3508_HandleTypeDef hm3508;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,7 +113,33 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  /* 配置 CAN 滤波器并启动 CAN1 */
+  CAN_FilterTypeDef sFilterConfig;
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
+  HAL_CAN_Start(&hcan1);
+  HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 
+  /* 初始化电机 */
+  M2006_Init(&hm2006, 1, 10000);   /* M2006: CAN ID=1, 最大电流=10000 */
+  M3508_Init(&hm3508, 2, 16384);   /* M3508: CAN ID=2, 最大电流=16384 */
+
+  /* 等待电机连接 */
+  uint32_t motor_wait_start = HAL_GetTick();
+  while (!M2006_IsConnected(&hm2006) || !M3508_IsConnected(&hm3508)) {
+      if (HAL_GetTick() - motor_wait_start > 3000) {
+          break;  /* 等待超时，继续执行 */
+      }
+  }
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -127,6 +158,22 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    /* 简单的电机控制测试：M2006 正转，M3508 反转 */
+    int16_t currents[4] = {0};
+    
+    /* M2006: 设置 50% 电流正转 */
+    M2006_SetCurrent(&hm2006, 5000);
+    /* M3508: 设置 50% 电流反转 */
+    M3508_SetCurrent(&hm3508, -8000);
+    
+    /* 获取当前应发送的电流值 */
+    currents[0] = M2006_GetTargetCurrent(&hm2006);
+    currents[1] = M3508_GetTargetCurrent(&hm3508);
+    
+    /* 通过 CAN1 发送电流控制帧 */
+    CAN1_SendMotorCurrent(currents);
+    
+    HAL_Delay(10);  /* 100Hz 控制频率 */
   }
   /* USER CODE END 3 */
 }

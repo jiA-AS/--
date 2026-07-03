@@ -45,8 +45,11 @@
 ├── CMakeLists.txt            # CMake 构建配置
 ├── stlink.cfg                # OpenOCD 烧录配置
 └── .vscode/
-    ├── tasks.json            # VSCode 编译/烧录任务
-    └── settings.json         # VSCode CMake 设置
+    ├── c_cpp_properties.json # C/C++ IntelliSense 配置
+    ├── extensions.json       # 推荐扩展
+    ├── launch.json           # 调试/烧录配置（提供 UI 按钮）
+    ├── settings.json         # VSCode CMake 设置
+    └── tasks.json            # VSCode 编译/烧录任务
 ```
 
 ---
@@ -171,7 +174,63 @@ adapter speed 10000
 > - STM32G0: `target/stm32g0x.cfg`
 > - STM32H7: `target/stm32h7x.cfg`
 
-### 3.3 `.vscode/tasks.json`
+### 3.3 `.vscode/launch.json`（提供调试/烧录 UI 按钮）
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "STM32 Debug (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dart_mcu.elf",
+            "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
+            "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
+            "searchDir": [
+                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
+            ],
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "device": "STM32F427IIHx",
+            "interface": "swd",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "CMake: Build",
+            "showDevDebugOutput": "raw",
+            "rtos": "FreeRTOS"
+        },
+        {
+            "name": "Flash Only (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dart_mcu.elf",
+            "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
+            "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
+            "searchDir": [
+                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
+            ],
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "device": "STM32F427IIHx",
+            "interface": "swd",
+            "showDevDebugOutput": "raw",
+            "rtos": "FreeRTOS"
+        }
+    ]
+}
+```
+
+> **注意**：需要安装 **Cortex-Debug** 扩展 (`marus25.cortex-debug`) 才能使用 launch.json 的调试/烧录按钮。
+
+### 3.4 `.vscode/tasks.json`
 
 ```json
 {
@@ -203,7 +262,7 @@ adapter speed 10000
 }
 ```
 
-### 3.4 `.vscode/settings.json`
+### 3.5 `.vscode/settings.json`
 
 ```json
 {
@@ -220,6 +279,52 @@ adapter speed 10000
         "CMAKE_OBJDUMP": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-objdump.exe",
         "CMAKE_SIZE": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-size.exe"
     }
+}
+```
+
+### 3.6 `.vscode/c_cpp_properties.json`（代码智能提示）
+
+```json
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "STM32",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "compilerPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gcc.exe",
+            "intelliSenseMode": "gcc-arm",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/Core/Inc",
+                    "${workspaceFolder}/USB_DEVICE/App",
+                    "${workspaceFolder}/USB_DEVICE/Target",
+                    "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc",
+                    "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
+                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+                    "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
+                    "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
+                    "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F4xx/Include",
+                    "${workspaceFolder}/Drivers/CMSIS/Include"
+                ]
+            }
+        }
+    ]
+}
+```
+
+### 3.7 `.vscode/extensions.json`（推荐扩展）
+
+```json
+{
+    "recommendations": [
+        "marus25.cortex-debug",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools"
+    ]
 }
 ```
 
@@ -317,19 +422,35 @@ openocd -f stlink.cfg -c "program build/dart_mcu.elf verify reset exit"
 
 ### 6.1 安装 VSCode 扩展
 
-- **CMake Tools** (`ms-vscode.cmake-tools`)
-- **C/C++** (`ms-vscode.cpptools`)
-- **Cortex-Debug** (`marus25.cortex-debug`) - 可选，用于调试
+打开项目后，VSCode 右下角会弹出提示安装推荐扩展，包括：
+
+| 扩展 | ID | 用途 |
+|------|-----|------|
+| **Cortex-Debug** | `marus25.cortex-debug` | 🔴 **必须** - 提供调试/烧录 UI 按钮（F5） |
+| **CMake Tools** | `ms-vscode.cmake-tools` | 提供编译 UI 按钮（Ctrl+Shift+B） |
+| **C/C++** | `ms-vscode.cpptools` | 代码智能提示 |
 
 ### 6.2 编译
 
-1. 在 VSCode 中打开项目文件夹
-2. 按 `Ctrl+Shift+B` 或运行 Task `CMake: Build`
+| 方式 | 操作 |
+|------|------|
+| **UI 按钮** | 点击 VSCode 底部状态栏的 `▶️ Build` 按钮 |
+| **快捷键** | `Ctrl+Shift+B` → 选择 `CMake: Build` |
+| **命令面板** | `Ctrl+Shift+P` → `Tasks: Run Task` → `CMake: Build` |
 
 ### 6.3 烧录
 
-1. 连接 ST-Link 到开发板
-2. 按 `Ctrl+Shift+P` → `Tasks: Run Task` → `Flash: OpenOCD`
+| 方式 | 操作 |
+|------|------|
+| **UI 按钮** | 点击 VSCode 左侧 `运行和调试` 图标 → 选择 `Flash Only (OpenOCD)` → 点击 `▶️` 按钮 |
+| **快捷键** | `Ctrl+Shift+P` → `Tasks: Run Task` → `Flash: OpenOCD` |
+
+### 6.4 调试
+
+| 方式 | 操作 |
+|------|------|
+| **UI 按钮** | 点击 VSCode 左侧 `运行和调试` 图标 → 选择 `STM32 Debug (OpenOCD)` → 点击 `▶️` 按钮 |
+| **快捷键** | `F5` |
 
 ---
 
@@ -360,6 +481,12 @@ Error: open failed
 - `-DSTM32F427xx` 宏定义
 - 链接脚本文件名
 - `stlink.cfg` 中的 `target/xxx.cfg`
+
+### Q5: 没有调试/烧录 UI 按钮
+**解决**：
+- 确保已安装 **Cortex-Debug** 扩展 (`marus25.cortex-debug`)
+- 确保 `.vscode/launch.json` 文件存在且配置正确
+- 按 `Ctrl+Shift+P` → `Developer: Reload Window` 重新加载
 
 ---
 

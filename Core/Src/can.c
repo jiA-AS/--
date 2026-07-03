@@ -21,7 +21,12 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
+#include "motor_M2006.h"
+#include "motor_M3508.h"
+#include <string.h>
 
+extern M2006_HandleTypeDef hm2006;
+extern M3508_HandleTypeDef hm3508;
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
@@ -214,5 +219,103 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+ * @brief  通过 CAN1 发送电机电流控制帧 (ID: 0x200)
+ * @note   数据格式：每2字节对应一个电机电流 (int16_t)
+ *         [0-1]: 电机1, [2-3]: 电机2, [4-5]: 电机3, [6-7]: 电机4
+ * @param  currents: 4个电机的电流数组
+ */
+void CAN1_SendMotorCurrent(int16_t currents[4])
+{
+    CAN_TxHeaderTypeDef tx_header;
+    uint32_t tx_mailbox;
+    uint8_t can_data[8];
 
+    /* 填充 CAN 数据帧 */
+    can_data[0] = (uint8_t)(currents[0] >> 8);
+    can_data[1] = (uint8_t)(currents[0]);
+    can_data[2] = (uint8_t)(currents[1] >> 8);
+    can_data[3] = (uint8_t)(currents[1]);
+    can_data[4] = (uint8_t)(currents[2] >> 8);
+    can_data[5] = (uint8_t)(currents[2]);
+    can_data[6] = (uint8_t)(currents[3] >> 8);
+    can_data[7] = (uint8_t)(currents[3]);
+
+    /* 配置 CAN 发送头 */
+    tx_header.StdId = 0x200;
+    tx_header.IDE = CAN_ID_STD;
+    tx_header.RTR = CAN_RTR_DATA;
+    tx_header.DLC = 8;
+    tx_header.TransmitGlobalTime = DISABLE;
+
+    /* 等待发送邮箱空闲 */
+    uint32_t timeout = 0;
+    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) {
+        if (++timeout > 5000) {
+            HAL_CAN_AbortTxRequest(&hcan1, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
+            break;
+        }
+    }
+
+    /* 发送 CAN 消息 */
+    if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0) {
+        HAL_CAN_AddTxMessage(&hcan1, &tx_header, can_data, &tx_mailbox);
+    }
+}
+
+/**
+ * @brief  CAN1 接收 FIFO0 消息回调
+ * @note   解码 M2006 和 M3508 电机的反馈数据
+ *         M2006 反馈 ID: 0x201
+ *         M3508 反馈 ID: 0x202
+ */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    CAN_RxHeaderTypeDef rx_header;
+    uint8_t rx_data[8];
+
+    if (hcan == &hcan1) {
+        HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
+
+        switch (rx_header.StdId) {
+            case 0x201: {
+                /* M2006 电机反馈 (CAN ID = 1) */
+                M2006_DecodeCAN(&hm2006, rx_data);
+                break;
+            }
+            case 0x202: {
+                /* M3508 电机反馈 (CAN ID = 2) */
+                M3508_DecodeCAN(&hm3508, rx_data);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
+/**
+ * @brief  CAN 错误回调
+ * @note   检测到 Bus-Off 时自动恢复
+ */
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+{
+    uint32_t err = HAL_CAN_GetError(hcan);
+    if (err & HAL_CAN_ERROR_BOF) {
+        /* Bus-Off 错误，重启 CAN */
+        HAL_CAN_Stop(hcan);
+        HAL_CAN_DeInit(hcan);
+        HAL_Delay(10);
+
+        if (hcan->Instance == CAN1) {
+            MX_CAN1_Init();
+        } else if (hcan->Instance == CAN2) {
+            MX_CAN2_Init();
+        }
+
+        if (HAL_CAN_Start(hcan) != HAL_OK) {
+            /* 启动失败 */
+        }
+    }
+}
 /* USER CODE END 1 */
