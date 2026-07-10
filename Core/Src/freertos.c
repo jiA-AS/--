@@ -7,7 +7,6 @@
   */
 /* USER CODE END Header */
 
-/* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
@@ -19,12 +18,11 @@
 #include "can.h"
 #include <string.h>
 
-extern M2006_HandleTypeDef hm2006;     /* ID=1, 反馈 0x201 */
+extern M2006_HandleTypeDef hm2006;     /* ID=4, 反馈 0x204 */
 extern M3508_HandleTypeDef hm3508_2;   /* ID=2, 反馈 0x202 */
 extern M3508_HandleTypeDef hm3508_3;   /* ID=3, 反馈 0x203 */
 /* USER CODE END Includes */
 
-/* Private variables ---------------------------------------------------------*/
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
@@ -36,12 +34,7 @@ void StartDefaultTask(void *argument);
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void);
 
-/* USER CODE BEGIN 4 */
-void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
-{
-   while(1);
-}
-/* USER CODE END 4 */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName) { while(1); }
 
 void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
@@ -52,7 +45,6 @@ void StartDefaultTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
-  /* 等待所有电机连接 */
   uint32_t wait_start = HAL_GetTick();
   while (HAL_GetTick() - wait_start < 3000) {
       if (M2006_IsConnected(&hm2006) && M3508_IsConnected(&hm3508_2) && M3508_IsConnected(&hm3508_3))
@@ -60,17 +52,15 @@ void StartDefaultTask(void *argument)
       osDelay(10);
   }
 
-  /* 1KHz 精确定时 */
   TickType_t xLastWakeTime = xTaskGetTickCount();
 
-  /* 目标电流 */
-  int16_t target_2006 = 5000;   /* M2006: 50% */
-  int16_t target_3508_2 = 2000; /* M3508 #1: ~50% */
-  int16_t target_3508_3 = 0; /* M3508 #2: ~50% */
+  /* 所有电机测试通过，稳定控制 */
+  int16_t target_2006 = 3000;    /* M2006: 30% 正转 */
+  int16_t target_3508_2 = 2000;  /* M3508 #1: ~12% 正转 */
+  int16_t target_3508_3 = 0;     /* M3508 #2: 停止 */
 
   for(;;)
   {
-    /* 状态管理：IDLE→RUNNING 转换 */
     if (hm2006.state == M2006_IDLE || hm2006.state == M2006_RUNNING)
         M2006_SetCurrent(&hm2006, target_2006);
     else
@@ -86,24 +76,18 @@ void StartDefaultTask(void *argument)
     else
         hm3508_3.target_current = 0;
 
-    /* DJI 标准协议：0x200 帧承载 ID=1-4 四个电机
-     * ID=1 → bytes 0-1  (M2006)
-     * ID=2 → bytes 2-3  (M3508 #1)
-     * ID=3 → bytes 4-5  (M3508 #2)
-     * ID=4 → bytes 6-7  (未使用)
-     */
     uint8_t can_data[8];
     memset(can_data, 0, 8);
 
-    int16_t c1 = M2006_GetTargetCurrent(&hm2006);
     int16_t c2 = M3508_GetTargetCurrent(&hm3508_2);
     int16_t c3 = M3508_GetTargetCurrent(&hm3508_3);
-    can_data[0] = (uint8_t)(c1 >> 8);
-    can_data[1] = (uint8_t)(c1);
+    int16_t c4 = M2006_GetTargetCurrent(&hm2006);
     can_data[2] = (uint8_t)(c2 >> 8);
     can_data[3] = (uint8_t)(c2);
     can_data[4] = (uint8_t)(c3 >> 8);
     can_data[5] = (uint8_t)(c3);
+    can_data[6] = (uint8_t)(c4 >> 8);
+    can_data[7] = (uint8_t)(c4);
 
     CAN_TxHeaderTypeDef tx_header;
     tx_header.StdId = 0x200;

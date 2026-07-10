@@ -23,7 +23,7 @@
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
-M2006_HandleTypeDef hm2006;      /* M2006 + C610: CAN ID=1 */
+M2006_HandleTypeDef hm2006;      /* M2006 + C610: CAN ID=4 */
 M3508_HandleTypeDef hm3508_2;    /* M3508 + C620: CAN ID=2 */
 M3508_HandleTypeDef hm3508_3;    /* M3508 + C620: CAN ID=3 */
 /* USER CODE END PV */
@@ -66,12 +66,12 @@ int main(void)
   HAL_CAN_Start(&hcan1);
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 
-  /* 初始化电机: 匹配参考代码 motor_controller.cpp:
-   * MotorTriggerLS: M2006, ID=1, max=10000
-   * MotorLoad[0]:   M3508, ID=2, max=16384
-   * MotorLoad[1]:   M3508, ID=3, max=16384
+  /* 初始化电机:
+   * M2006:  ID=4, max=10000
+   * M3508 #1: ID=2, max=16384
+   * M3508 #2: ID=3, max=16384
    */
-  M2006_Init(&hm2006,   1, 10000);
+  M2006_Init(&hm2006,   4, 10000);
   M3508_Init(&hm3508_2, 2, 16384);
   M3508_Init(&hm3508_3, 3, 16384);
 

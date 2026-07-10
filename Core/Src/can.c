@@ -5,16 +5,6 @@
   * @brief   This file provides code for the configuration
   *          of the CAN instances.
   ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -36,10 +26,6 @@ CAN_HandleTypeDef hcan2;
 /* CAN1 init function */
 void MX_CAN1_Init(void)
 {
-  /* USER CODE BEGIN CAN1_Init 0 */
-  /* USER CODE END CAN1_Init 0 */
-  /* USER CODE BEGIN CAN1_Init 1 */
-  /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 6;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
@@ -52,21 +38,12 @@ void MX_CAN1_Init(void)
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN1_Init 2 */
-  /* USER CODE END CAN1_Init 2 */
+  if (HAL_CAN_Init(&hcan1) != HAL_OK) Error_Handler();
 }
 
 /* CAN2 init function */
 void MX_CAN2_Init(void)
 {
-  /* USER CODE BEGIN CAN2_Init 0 */
-  /* USER CODE END CAN2_Init 0 */
-  /* USER CODE BEGIN CAN2_Init 1 */
-  /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
   hcan2.Init.Prescaler = 6;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
@@ -79,12 +56,7 @@ void MX_CAN2_Init(void)
   hcan2.Init.AutoRetransmission = DISABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
   hcan2.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN2_Init 2 */
-  /* USER CODE END CAN2_Init 2 */
+  if (HAL_CAN_Init(&hcan2) != HAL_OK) Error_Handler();
 }
 
 static uint32_t HAL_RCC_CAN1_CLK_ENABLED=0;
@@ -94,12 +66,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(canHandle->Instance==CAN1)
   {
-  /* USER CODE BEGIN CAN1_MspInit 0 */
-  /* USER CODE END CAN1_MspInit 0 */
     HAL_RCC_CAN1_CLK_ENABLED++;
-    if(HAL_RCC_CAN1_CLK_ENABLED==1){
-      __HAL_RCC_CAN1_CLK_ENABLE();
-    }
+    if(HAL_RCC_CAN1_CLK_ENABLED==1) __HAL_RCC_CAN1_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
     GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -109,18 +77,12 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
     HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-  /* USER CODE BEGIN CAN1_MspInit 1 */
-  /* USER CODE END CAN1_MspInit 1 */
   }
   else if(canHandle->Instance==CAN2)
   {
-  /* USER CODE BEGIN CAN2_MspInit 0 */
-  /* USER CODE END CAN2_MspInit 0 */
     __HAL_RCC_CAN2_CLK_ENABLE();
     HAL_RCC_CAN1_CLK_ENABLED++;
-    if(HAL_RCC_CAN1_CLK_ENABLED==1){
-      __HAL_RCC_CAN1_CLK_ENABLE();
-    }
+    if(HAL_RCC_CAN1_CLK_ENABLED==1) __HAL_RCC_CAN1_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -130,8 +92,6 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
     HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
-  /* USER CODE BEGIN CAN2_MspInit 1 */
-  /* USER CODE END CAN2_MspInit 1 */
   }
 }
 
@@ -139,30 +99,18 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 {
   if(canHandle->Instance==CAN1)
   {
-  /* USER CODE BEGIN CAN1_MspDeInit 0 */
-  /* USER CODE END CAN1_MspDeInit 0 */
     HAL_RCC_CAN1_CLK_ENABLED--;
-    if(HAL_RCC_CAN1_CLK_ENABLED==0){
-      __HAL_RCC_CAN1_CLK_DISABLE();
-    }
+    if(HAL_RCC_CAN1_CLK_ENABLED==0) __HAL_RCC_CAN1_CLK_DISABLE();
     HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0|GPIO_PIN_1);
     HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
-  /* USER CODE BEGIN CAN1_MspDeInit 1 */
-  /* USER CODE END CAN1_MspDeInit 1 */
   }
   else if(canHandle->Instance==CAN2)
   {
-  /* USER CODE BEGIN CAN2_MspDeInit 0 */
-  /* USER CODE END CAN2_MspDeInit 0 */
     __HAL_RCC_CAN2_CLK_DISABLE();
     HAL_RCC_CAN1_CLK_ENABLED--;
-    if(HAL_RCC_CAN1_CLK_ENABLED==0){
-      __HAL_RCC_CAN1_CLK_DISABLE();
-    }
+    if(HAL_RCC_CAN1_CLK_ENABLED==0) __HAL_RCC_CAN1_CLK_DISABLE();
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12|GPIO_PIN_13);
     HAL_NVIC_DisableIRQ(CAN2_RX0_IRQn);
-  /* USER CODE BEGIN CAN2_MspDeInit 1 */
-  /* USER CODE END CAN2_MspDeInit 1 */
   }
 }
 
@@ -176,7 +124,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
         HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
 
         switch (rx_header.StdId) {
-            case 0x201: { /* M2006 反馈 (CAN ID=1) */
+            case 0x204: { /* M2006 反馈 (CAN ID=4) */
                 M2006_DecodeCAN(&hm2006, rx_data);
                 break;
             }
@@ -201,12 +149,9 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
         HAL_CAN_Stop(hcan);
         HAL_CAN_DeInit(hcan);
         HAL_Delay(10);
-        if (hcan->Instance == CAN1) {
-            MX_CAN1_Init();
-        } else if (hcan->Instance == CAN2) {
-            MX_CAN2_Init();
-        }
-        if (HAL_CAN_Start(hcan) != HAL_OK) { }
+        if (hcan->Instance == CAN1) MX_CAN1_Init();
+        else if (hcan->Instance == CAN2) MX_CAN2_Init();
+        HAL_CAN_Start(hcan);
     }
 }
 /* USER CODE END 1 */
