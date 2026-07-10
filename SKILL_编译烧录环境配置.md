@@ -252,7 +252,11 @@ adapter speed 10000
             "args": [
                 "-f", "interface/stlink.cfg",
                 "-f", "target/stm32f4x.cfg",
-                "-c", "program build/dart_mcu.elf verify reset exit"
+                "-c", "init",
+                "-c", "halt",
+                "-c", "program build/dart_mcu.elf verify",
+                "-c", "reset run",
+                "-c", "shutdown"
             ],
             "group": "build",
             "problemMatcher": [],
@@ -388,11 +392,11 @@ SWCLK  <---->  SWCLK (PA14)
 # 设置环境变量
 $env:PATH = "D:\DevEnv\GNU-tools-for-STM32\bin;D:\DevEnv\BuildTools\CMake\bin;D:\DevEnv\BuildTools\Ninja;D:\DevEnv\Debuggers\OpenOCD\bin;$env:PATH"
 
-# 烧录（使用项目中的 stlink.cfg）
-openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "program build/dart_mcu.elf verify reset exit"
+# 烧录（使用 OpenOCD 内置配置）
+openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
 
-# 或者使用绝对路径的 stlink.cfg
-openocd -f stlink.cfg -c "program build/dart_mcu.elf verify reset exit"
+# 或者使用项目中的 stlink.cfg
+openocd -f stlink.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
 ```
 
 ### 5.3 烧录参数说明
@@ -401,10 +405,12 @@ openocd -f stlink.cfg -c "program build/dart_mcu.elf verify reset exit"
 |------|------|
 | `-f interface/stlink.cfg` | 指定调试器接口配置（ST-Link） |
 | `-f target/stm32f4x.cfg` | 指定目标芯片配置 |
-| `program xxx.elf` | 烧录 ELF 文件 |
-| `verify` | 烧录后校验 |
-| `reset` | 烧录后复位芯片 |
-| `exit` | 烧录完成后退出 OpenOCD |
+| `-c` | 指定 OpenOCD 执行命令 |
+| `init` | 初始化调试器和目标芯片连接 |
+| `halt` | 挂起目标芯片，为烧录做准备 |
+| `program xxx.elf verify` | 烧录 ELF 文件并校验 |
+| `reset run` | 复位芯片并立即运行程序（**关键**：不能用 `reset`，会挂起芯片导致程序不运行） |
+| `shutdown` | 关闭 OpenOCD 并释放调试资源 |
 
 ### 5.4 烧录成功标志
 
@@ -519,7 +525,7 @@ cmake --build build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "=== 3. 烧录 ===" -ForegroundColor Cyan
-openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "program build/dart_mcu.elf verify reset exit"
+openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "=== ✅ 完成! ===" -ForegroundColor Green

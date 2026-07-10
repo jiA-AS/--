@@ -22,11 +22,19 @@
                 "-f",
                 "target/stm32f4x.cfg",
                 "-c",
-                "program build/dart_mcu.elf verify reset exit"
+                "init",
+                "-c",
+                "halt",
+                "-c",
+                "program build/dart_mcu.elf verify",
+                "-c",
+                "reset run",
+                "-c",
+                "shutdown"
             ],
             "group": "build",
             "problemMatcher": [],
-            "detail": "使用 OpenOCD 直接烧录 build/dart_mcu.elf"
+            "detail": "使用 OpenOCD 直接烧录 build/dart_mcu.elf（烧录后自动复位并运行）"
         }
     ]
 }
