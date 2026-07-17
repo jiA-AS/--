@@ -11,16 +11,10 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-#include "motor_M2006.h"
-#include "motor_M3508.h"
 #include "motor_M4310.h"
-#include "motor_GM6020.h"
+#include "motor_rm.h"
 #include <string.h>
 
-extern M2006_HandleTypeDef hm2006;
-extern M3508_HandleTypeDef hm3508_2;
-extern M3508_HandleTypeDef hm3508_3;
-extern GM6020_HandleTypeDef hgm6020;
 extern M4310_HandleTypeDef hm4310_12;
 extern M4310_HandleTypeDef hm4310_13;
 /* USER CODE END 0 */
@@ -127,31 +121,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
     if (hcan == &hcan1) {
         HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
-
-        switch (rx_header.StdId) {
-            case 0x205: { /* GM6020 反馈 (CAN1 ID=1, 0x204+1) */
-                GM6020_DecodeCAN(&hgm6020, rx_data);
-                break;
-            }
-            case 0x204: { /* M2006 反馈 (CAN ID=4) */
-                M2006_DecodeCAN(&hm2006, rx_data);
-                break;
-            }
-            case 0x202: { /* M3508 #1 反馈 (CAN ID=2) */
-                M3508_DecodeCAN(&hm3508_2, rx_data);
-                break;
-            }
-            case 0x203: { /* M3508 #2 反馈 (CAN ID=3) */
-                M3508_DecodeCAN(&hm3508_3, rx_data);
-                break;
-            }
-            default:
-                break;
-        }
+        // M2006/M3508/GM6020 统一通过查表分发
+        motor_rm_can1_dispatch(rx_header.StdId, rx_data);
     }
     else if (hcan == &hcan2) {
         HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
-
+        // M4310 单独处理
         switch (rx_header.StdId) {
             case 0x20C: { /* M4310 #1 反馈 (CAN2 ID=12, 0x200+12) */
                 M4310_DecodeCAN(&hm4310_12, rx_data);

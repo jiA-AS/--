@@ -41,9 +41,13 @@ void M4310_SetCurrent(M4310_HandleTypeDef *hm4310, int16_t current)
     else if (current < -hm4310->max_current)
         current = -hm4310->max_current;
     
-    /* 如果电机处于 IDLE 状态，切换到 RUNNING */
+    /* IDLE → RUNNING */
     if (hm4310->state == M4310_IDLE)
         hm4310->state = M4310_RUNNING;
+
+    /* DISCONNECTED 状态下拒绝设置 */
+    if (hm4310->state == M4310_DISCONNECTED)
+        return;
     
     hm4310->target_current = current;
 }

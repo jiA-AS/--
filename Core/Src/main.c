@@ -18,17 +18,13 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include "motor_M2006.h"
-#include "motor_M3508.h"
 #include "motor_M4310.h"
-#include "motor_GM6020.h"
+#include "motor_rm.h"
+#include "dbus.h"
+#include "pid_controller.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
-M2006_HandleTypeDef hm2006;      /* M2006 + C610: CAN ID=4 */
-M3508_HandleTypeDef hm3508_2;    /* M3508 + C620: CAN ID=2 */
-M3508_HandleTypeDef hm3508_3;    /* M3508 + C620: CAN ID=3 */
-GM6020_HandleTypeDef hgm6020;    /* GM6020: CAN1 ID=1, 反馈 0x205, 控制 0x1FF */
 M4310_HandleTypeDef hm4310_12;   /* M4310: CAN2 ID=12, 反馈 0x20C */
 M4310_HandleTypeDef hm4310_13;   /* M4310: CAN2 ID=13, 反馈 0x20D */
 /* USER CODE END PV */
@@ -87,22 +83,27 @@ int main(void)
   HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
 
   /* 初始化电机:
-   * GM6020:   CAN1 ID=1, max=30000 (电压控制 0x1FF)
-   * M2006:    CAN1 ID=4, max=10000
-   * M3508 #1: CAN1 ID=2, max=16384
-   * M3508 #2: CAN1 ID=3, max=16384
-   * M4310 #1: CAN2 ID=12, max=10000
-   * M4310 #2: CAN2 ID=13, max=10000
+   * RM 系列 (M2006/M3508/GM6020) 通过 C++ 基类统一初始化
+   * M4310 × 2 保持原有 C 接口
    */
-  GM6020_Init(&hgm6020,    1,  30000);
-  M2006_Init(&hm2006,      4,  10000);
-  M3508_Init(&hm3508_2,    2,  16384);
-  M3508_Init(&hm3508_3,    3,  16384);
+  motor_rm_c_init_all();
   M4310_Init(&hm4310_12,  12,  10000);
   M4310_Init(&hm4310_13,  13,  10000);
 
+  /* 初始化 PID 控制器（关联电机对象指针） */
+  pid_controller_init_all();
+
+  /* 初始化 DBUS 遥控器 */
+  DT7_Init();
+  HAL_UARTEx_ReceiveToIdle_DMA(RC_UART_HANDLE, RC_UART_RXBUFFER, RC_UART_BUFFER_LEN);
+
   uint32_t motor_wait_start = HAL_GetTick();
-  while (!GM6020_IsConnected(&hgm6020) || !M2006_IsConnected(&hm2006) || !M3508_IsConnected(&hm3508_2) || !M3508_IsConnected(&hm3508_3) || !M4310_IsConnected(&hm4310_12) || !M4310_IsConnected(&hm4310_13)) {
+  while (!motor_rm_c_is_connected(motor_rm_gm6020) ||
+         !motor_rm_c_is_connected(motor_rm_m2006) ||
+         !motor_rm_c_is_connected(motor_rm_m3508_2) ||
+         !motor_rm_c_is_connected(motor_rm_m3508_3) ||
+         !M4310_IsConnected(&hm4310_12) ||
+         !M4310_IsConnected(&hm4310_13)) {
       if (HAL_GetTick() - motor_wait_start > 3000) break;
   }
   /* USER CODE END 2 */
@@ -142,3 +143,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void Error_Handler(void) { __disable_irq(); while(1); }
+
+/* DBUS UART 空闲中断回调 */
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if (huart == RC_UART_HANDLE && huart->RxEventType == HAL_UART_RXEVENT_IDLE)
+    {
+        if (Size == RC_FRAME_LEN)
+        {
+            DT7_Decode();
+        }
+        memset(RC_UART_RXBUFFER, 0, RC_UART_BUFFER_LEN);
+        HAL_UARTEx_ReceiveToIdle_DMA(RC_UART_HANDLE, RC_UART_RXBUFFER, RC_UART_BUFFER_LEN);
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == RC_UART_HANDLE)
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_ORE | UART_FLAG_NE | UART_FLAG_FE | UART_FLAG_PE);
+        HAL_UART_AbortReceive(huart);
+        memset(RC_UART_RXBUFFER, 0, RC_UART_BUFFER_LEN);
+        HAL_UARTEx_ReceiveToIdle_DMA(RC_UART_HANDLE, RC_UART_RXBUFFER, RC_UART_BUFFER_LEN);
+    }
+}

@@ -13,17 +13,19 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
-#include "motor_M2006.h"
-#include "motor_M3508.h"
 #include "motor_M4310.h"
-#include "motor_GM6020.h"
+#include "motor_rm.h"
+#include "dbus.h"
+#include "pid_controller.h"
+#include "state_machine.h"
 #include "can.h"
 #include <string.h>
 
-extern M2006_HandleTypeDef hm2006;     /* CAN1 ID=4, 反馈 0x204 */
-extern M3508_HandleTypeDef hm3508_2;   /* CAN1 ID=2, 反馈 0x202 */
-extern M3508_HandleTypeDef hm3508_3;   /* CAN1 ID=3, 反馈 0x203 */
-extern GM6020_HandleTypeDef hgm6020;   /* CAN1 ID=1, 反馈 0x205, 控制 0x1FF */
+// RM 系列电机状态值（与旧枚举 M*_IDLE=0, M*_RUNNING=1, M*_DISCONNECTED=2 保持一致）
+#define RM_STATE_IDLE          0
+#define RM_STATE_RUNNING       1
+#define RM_STATE_DISCONNECTED  2
+
 extern M4310_HandleTypeDef hm4310_12;  /* CAN2 ID=12, 反馈 0x20C */
 extern M4310_HandleTypeDef hm4310_13;  /* CAN2 ID=13, 反馈 0x20D */
 /* USER CODE END Includes */
@@ -52,10 +54,10 @@ void StartDefaultTask(void *argument)
 
   uint32_t wait_start = HAL_GetTick();
   while (HAL_GetTick() - wait_start < 3000) {
-      if (GM6020_IsConnected(&hgm6020) &&
-          M2006_IsConnected(&hm2006) &&
-          M3508_IsConnected(&hm3508_2) &&
-          M3508_IsConnected(&hm3508_3) &&
+      if (motor_rm_c_is_connected(motor_rm_gm6020) &&
+          motor_rm_c_is_connected(motor_rm_m2006) &&
+          motor_rm_c_is_connected(motor_rm_m3508_2) &&
+          motor_rm_c_is_connected(motor_rm_m3508_3) &&
           M4310_IsConnected(&hm4310_12) &&
           M4310_IsConnected(&hm4310_13))
           break;
@@ -64,47 +66,49 @@ void StartDefaultTask(void *argument)
 
   TickType_t xLastWakeTime = xTaskGetTickCount();
 
-  /* 目标值设定 */
-  int16_t target_2006 =0;     /* M2006: 30% 正转 */
-  int16_t target_3508_2 = 0;   /* M3508 #1: ~12% 正转 */
-  int16_t target_3508_3 = 0;      /* M3508 #2: 停止 */
-  int16_t target_gm6020 = -30000;  /* GM6020: 100% 反向电压（测试用） */
-  int16_t target_4310_12 = 3000;  /* M4310 #1: 30% 正转 */
-  int16_t target_4310_13 = 3000;  /* M4310 #2: 30% 正转 */
-
   for(;;)
   {
-    /* ==== CAN1 电机状态管理 ==== */
-    if (hgm6020.state == GM6020_IDLE || hgm6020.state == GM6020_RUNNING)
-        GM6020_SetVoltage(&hgm6020, target_gm6020);
-    else
-        hgm6020.target_voltage = 0;
+    /* 状态机更新：根据遥控器和电机连接状态切换 BOOT/PROTECT/REMOTE */
+    state_machine_update();
 
-    if (hm2006.state == M2006_IDLE || hm2006.state == M2006_RUNNING)
-        M2006_SetCurrent(&hm2006, target_2006);
-    else
-        hm2006.target_current = 0;
+    if (g_dart_state == STATE_REMOTE)
+    {
+        /* 遥控器 → 目标速度 (RPM)
+         *   ch0 (右摇杆 X) → GM6020 目标速度
+         *   ch2 (左摇杆 X) → M3508 #1 目标速度
+         *   ch3 (左摇杆 Y) → M3508 #2 目标速度
+         *   ch4_wheel (拨轮) → M2006 目标速度
+         */
+        int16_t scale = (RC_Data.Switch_Right == RC_SW_MID) ? 1 : 5;
 
-    if (hm3508_2.state == M3508_IDLE || hm3508_2.state == M3508_RUNNING)
-        M3508_SetCurrent(&hm3508_2, target_3508_2);
-    else
-        hm3508_2.target_current = 0;
+        pid_controller_set_target_gm6020((RC_Data.ch0 - 1024) * scale);
+        pid_controller_set_target_m2006((RC_Data.ch4_wheel - 1024) * scale);
+        pid_controller_set_target_m3508_2((RC_Data.ch2 - 1024) * scale);
+        pid_controller_set_target_m3508_3((RC_Data.ch3 - 1024) * scale);
 
-    if (hm3508_3.state == M3508_IDLE || hm3508_3.state == M3508_RUNNING)
-        M3508_SetCurrent(&hm3508_3, target_3508_3);
+        /* PID 计算输出 */
+        motor_rm_c_set_output(motor_rm_gm6020, pid_controller_update_gm6020());
+        motor_rm_c_set_output(motor_rm_m2006,  pid_controller_update_m2006());
+        motor_rm_c_set_output(motor_rm_m3508_2, pid_controller_update_m3508_2());
+        motor_rm_c_set_output(motor_rm_m3508_3, pid_controller_update_m3508_3());
+    }
     else
-        hm3508_3.target_current = 0;
+    {
+        /* PROTECT/BOOT: 全部锁定，PID 回零 */
+        pid_controller_set_target_gm6020(0);
+        pid_controller_set_target_m2006(0);
+        pid_controller_set_target_m3508_2(0);
+        pid_controller_set_target_m3508_3(0);
 
-    /* ==== CAN2 电机状态管理 ==== */
-    if (hm4310_12.state == M4310_IDLE || hm4310_12.state == M4310_RUNNING)
-        M4310_SetCurrent(&hm4310_12, target_4310_12);
-    else
-        hm4310_12.target_current = 0;
+        motor_rm_c_set_output(motor_rm_gm6020, 0);
+        motor_rm_c_set_output(motor_rm_m2006, 0);
+        motor_rm_c_set_output(motor_rm_m3508_2, 0);
+        motor_rm_c_set_output(motor_rm_m3508_3, 0);
+    }
 
-    if (hm4310_13.state == M4310_IDLE || hm4310_13.state == M4310_RUNNING)
-        M4310_SetCurrent(&hm4310_13, target_4310_13);
-    else
-        hm4310_13.target_current = 0;
+    /* CAN2 M4310 始终锁定（暂时不控） */
+    M4310_SetCurrent(&hm4310_12, 0);
+    M4310_SetCurrent(&hm4310_13, 0);
 
     /* ==== CAN1 发送: 0x200 帧（M3508+M2006 电流控制） ==== */
     CAN_TxHeaderTypeDef tx_header;
@@ -112,17 +116,16 @@ void StartDefaultTask(void *argument)
     uint32_t tx_mailbox, timeout;
     memset(can1_data, 0, 8);
 
-    int16_t c2 = M3508_GetTargetCurrent(&hm3508_2);
-    int16_t c3 = M3508_GetTargetCurrent(&hm3508_3);
-    int16_t c4 = M2006_GetTargetCurrent(&hm2006);
-    can1_data[0] = 0;  /* ID=1 保留给 GM6020（用 0x1FF 发送） */
+    /* 槽位: [0]=ID1(保留), [1]=ID2, [2]=ID3, [3]=ID4 */
+    /* ID=1 留给 GM6020，用 0x1FF 单独发 */
+    can1_data[0] = 0;
     can1_data[1] = 0;
-    can1_data[2] = (uint8_t)(c2 >> 8);
-    can1_data[3] = (uint8_t)(c2);
-    can1_data[4] = (uint8_t)(c3 >> 8);
-    can1_data[5] = (uint8_t)(c3);
-    can1_data[6] = (uint8_t)(c4 >> 8);
-    can1_data[7] = (uint8_t)(c4);
+    // ID=2: M3508 #1 → 槽位 1
+    packCanArray(can1_data, 1, motor_rm_c_get_output(motor_rm_m3508_2));
+    // ID=3: M3508 #2 → 槽位 2
+    packCanArray(can1_data, 2, motor_rm_c_get_output(motor_rm_m3508_3));
+    // ID=4: M2006 → 槽位 3
+    packCanArray(can1_data, 3, motor_rm_c_get_output(motor_rm_m2006));
 
     tx_header.StdId = 0x200;
     tx_header.IDE = CAN_ID_STD;
@@ -144,9 +147,8 @@ void StartDefaultTask(void *argument)
     uint8_t gm6020_data[8];
     memset(gm6020_data, 0, 8);
 
-    int16_t v1 = GM6020_GetTargetVoltage(&hgm6020);
-    gm6020_data[0] = (uint8_t)(v1 >> 8);
-    gm6020_data[1] = (uint8_t)(v1);
+    /* GM6020: ID=1 → 槽位 0 */
+    packCanArray(gm6020_data, 0, motor_rm_c_get_output(motor_rm_gm6020));
 
     tx_header.StdId = 0x1FF;
     tx_header.DLC = 8;
