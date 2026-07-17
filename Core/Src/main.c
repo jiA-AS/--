@@ -20,12 +20,17 @@
 /* USER CODE BEGIN Includes */
 #include "motor_M2006.h"
 #include "motor_M3508.h"
+#include "motor_M4310.h"
+#include "motor_GM6020.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
 M2006_HandleTypeDef hm2006;      /* M2006 + C610: CAN ID=4 */
 M3508_HandleTypeDef hm3508_2;    /* M3508 + C620: CAN ID=2 */
 M3508_HandleTypeDef hm3508_3;    /* M3508 + C620: CAN ID=3 */
+GM6020_HandleTypeDef hgm6020;    /* GM6020: CAN1 ID=1, 反馈 0x205, 控制 0x1FF */
+M4310_HandleTypeDef hm4310_12;   /* M4310: CAN2 ID=12, 反馈 0x20C */
+M4310_HandleTypeDef hm4310_13;   /* M4310: CAN2 ID=13, 反馈 0x20D */
 /* USER CODE END PV */
 
 void SystemClock_Config(void);
@@ -66,17 +71,38 @@ int main(void)
   HAL_CAN_Start(&hcan1);
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 
+  /* 配置 CAN2 滤波器 */
+  sFilterConfig.FilterBank = 14;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(&hcan2, &sFilterConfig);
+  HAL_CAN_Start(&hcan2);
+  HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
+
   /* 初始化电机:
-   * M2006:  ID=4, max=10000
-   * M3508 #1: ID=2, max=16384
-   * M3508 #2: ID=3, max=16384
+   * GM6020:   CAN1 ID=1, max=30000 (电压控制 0x1FF)
+   * M2006:    CAN1 ID=4, max=10000
+   * M3508 #1: CAN1 ID=2, max=16384
+   * M3508 #2: CAN1 ID=3, max=16384
+   * M4310 #1: CAN2 ID=12, max=10000
+   * M4310 #2: CAN2 ID=13, max=10000
    */
-  M2006_Init(&hm2006,   4, 10000);
-  M3508_Init(&hm3508_2, 2, 16384);
-  M3508_Init(&hm3508_3, 3, 16384);
+  GM6020_Init(&hgm6020,    1,  30000);
+  M2006_Init(&hm2006,      4,  10000);
+  M3508_Init(&hm3508_2,    2,  16384);
+  M3508_Init(&hm3508_3,    3,  16384);
+  M4310_Init(&hm4310_12,  12,  10000);
+  M4310_Init(&hm4310_13,  13,  10000);
 
   uint32_t motor_wait_start = HAL_GetTick();
-  while (!M2006_IsConnected(&hm2006) || !M3508_IsConnected(&hm3508_2) || !M3508_IsConnected(&hm3508_3)) {
+  while (!GM6020_IsConnected(&hgm6020) || !M2006_IsConnected(&hm2006) || !M3508_IsConnected(&hm3508_2) || !M3508_IsConnected(&hm3508_3) || !M4310_IsConnected(&hm4310_12) || !M4310_IsConnected(&hm4310_13)) {
       if (HAL_GetTick() - motor_wait_start > 3000) break;
   }
   /* USER CODE END 2 */

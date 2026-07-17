@@ -25,8 +25,6 @@
 
 ## 2. 项目文件清单
 
-一个可编译烧录的 STM32 项目需要以下文件：
-
 ### 2.1 必需文件（由 STM32CubeMX 生成）
 ```
 项目根目录/
@@ -104,7 +102,7 @@ else ()
     add_compile_options(-O0 -g -fno-inline)
 endif ()
 
-# ===== 包含路径（根据项目实际目录修改） =====
+# ===== 包含路径 =====
 include_directories(
     Core/Inc
     USB_DEVICE/App
@@ -147,34 +145,17 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 Building ${BIN_FILE}")
 ```
 
-> **注意**：如果芯片不同，需要修改：
-> - `-mcpu=` 参数（如 cortex-m3, cortex-m7 等）
-> - `-mfpu=` 和 `-mfloat-abi=` 参数
-> - `add_definitions()` 中的 `-DSTM32F427xx`
-> - 链接脚本文件名
-> - `include_directories()` 中的路径
-
 ### 3.2 `stlink.cfg`
 
 ```tcl
 # choose st-link/j-link/dap-link etc.
 source [find interface/stlink.cfg]
-#transport select swd
 transport select hla_swd
-# 根据芯片型号修改 target 配置文件
 source [find target/stm32f4x.cfg]
-# download speed = 10MHz
 adapter speed 10000
 ```
 
-> **注意**：不同芯片需要修改 `source [find target/xxx.cfg]`：
-> - STM32F1: `target/stm32f1x.cfg`
-> - STM32F4: `target/stm32f4x.cfg`
-> - STM32F7: `target/stm32f7x.cfg`
-> - STM32G0: `target/stm32g0x.cfg`
-> - STM32H7: `target/stm32h7x.cfg`
-
-### 3.3 `.vscode/launch.json`（提供调试/烧录 UI 按钮）
+### 3.3 `.vscode/launch.json`
 
 ```json
 {
@@ -189,13 +170,8 @@ adapter speed 10000
             "executable": "${workspaceFolder}/build/dart_mcu.elf",
             "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
             "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
-            "searchDir": [
-                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
-            ],
-            "configFiles": [
-                "interface/stlink.cfg",
-                "target/stm32f4x.cfg"
-            ],
+            "searchDir": ["D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"],
+            "configFiles": ["interface/stlink.cfg", "target/stm32f4x.cfg"],
             "device": "STM32F427IIHx",
             "interface": "swd",
             "runToEntryPoint": "main",
@@ -212,13 +188,8 @@ adapter speed 10000
             "executable": "${workspaceFolder}/build/dart_mcu.elf",
             "serverpath": "D:/DevEnv/Debuggers/OpenOCD/bin/openocd.exe",
             "gdbPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
-            "searchDir": [
-                "D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"
-            ],
-            "configFiles": [
-                "interface/stlink.cfg",
-                "target/stm32f4x.cfg"
-            ],
+            "searchDir": ["D:/DevEnv/Debuggers/OpenOCD/share/openocd/scripts"],
+            "configFiles": ["interface/stlink.cfg", "target/stm32f4x.cfg"],
             "device": "STM32F427IIHx",
             "interface": "swd",
             "showDevDebugOutput": "raw",
@@ -227,8 +198,6 @@ adapter speed 10000
     ]
 }
 ```
-
-> **注意**：需要安装 **Cortex-Debug** 扩展 (`marus25.cortex-debug`) 才能使用 launch.json 的调试/烧录按钮。
 
 ### 3.4 `.vscode/tasks.json`
 
@@ -286,41 +255,23 @@ adapter speed 10000
 }
 ```
 
-### 3.6 `.vscode/c_cpp_properties.json`（代码智能提示）
+### 3.6 `.vscode/c_cpp_properties.json`
 
 ```json
 {
     "version": 4,
-    "configurations": [
-        {
-            "name": "STM32",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
-            "compilerPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gcc.exe",
-            "intelliSenseMode": "gcc-arm",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "browse": {
-                "path": [
-                    "${workspaceFolder}/Core/Inc",
-                    "${workspaceFolder}/USB_DEVICE/App",
-                    "${workspaceFolder}/USB_DEVICE/Target",
-                    "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc",
-                    "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
-                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
-                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
-                    "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
-                    "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
-                    "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
-                    "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F4xx/Include",
-                    "${workspaceFolder}/Drivers/CMSIS/Include"
-                ]
-            }
-        }
-    ]
+    "configurations": [{
+        "name": "STM32",
+        "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+        "compilerPath": "D:/DevEnv/GNU-tools-for-STM32/bin/arm-none-eabi-gcc.exe",
+        "intelliSenseMode": "gcc-arm",
+        "cStandard": "c11",
+        "cppStandard": "c++17"
+    }]
 }
 ```
 
-### 3.7 `.vscode/extensions.json`（推荐扩展）
+### 3.7 `.vscode/extensions.json`
 
 ```json
 {
@@ -336,204 +287,44 @@ adapter speed 10000
 
 ## 4. 编译步骤
 
-### 4.1 一键编译（推荐）
-
-在项目根目录执行：
-
 ```powershell
-# 设置环境变量（临时）
 $env:PATH = "D:\DevEnv\GNU-tools-for-STM32\bin;D:\DevEnv\BuildTools\CMake\bin;D:\DevEnv\BuildTools\Ninja;D:\DevEnv\Debuggers\OpenOCD\bin;$env:PATH"
-
-# 配置 CMake（首次或修改 CMakeLists.txt 后执行）
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-
-# 编译
 cmake --build build
 ```
 
-### 4.2 分步说明
-
-| 步骤 | 命令 | 说明 |
-|------|------|------|
-| **配置** | `cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug` | 生成构建系统文件 |
-| **编译** | `cmake --build build` | 编译所有源文件 |
-| **清理** | `cmake --build build --target clean` | 清理构建产物 |
-| **重新编译** | `rm -rf build && cmake -B build -G Ninja ...` | 完全重新构建 |
-
-### 4.3 编译产物
-
-```
-build/
-├── dart_mcu.elf      # ELF 可执行文件（用于调试/烧录）
-├── dart_mcu.hex      # HEX 格式（用于烧录）
-├── dart_mcu.bin      # 二进制格式（用于烧录）
-├── dart_mcu.map      # 内存映射文件
-└── ...               # 中间 .obj 文件
-```
-
 ---
 
-## 5. 烧录步骤
-
-### 5.1 硬件连接
-
-```
-ST-Link        STM32 开发板
-------         ----------
-VCC    <---->  VCC (3.3V)
-GND    <---->  GND
-SWDIO  <---->  SWDIO (PA13)
-SWCLK  <---->  SWCLK (PA14)
-```
-
-### 5.2 烧录命令
+## 5. 烧录命令
 
 ```powershell
-# 设置环境变量
-$env:PATH = "D:\DevEnv\GNU-tools-for-STM32\bin;D:\DevEnv\BuildTools\CMake\bin;D:\DevEnv\BuildTools\Ninja;D:\DevEnv\Debuggers\OpenOCD\bin;$env:PATH"
-
-# 烧录（使用 OpenOCD 内置配置）
 openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
-
-# 或者使用项目中的 stlink.cfg
-openocd -f stlink.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
 ```
 
-### 5.3 烧录参数说明
-
-| 参数 | 说明 |
-|------|------|
-| `-f interface/stlink.cfg` | 指定调试器接口配置（ST-Link） |
-| `-f target/stm32f4x.cfg` | 指定目标芯片配置 |
-| `-c` | 指定 OpenOCD 执行命令 |
-| `init` | 初始化调试器和目标芯片连接 |
-| `halt` | 挂起目标芯片，为烧录做准备 |
-| `program xxx.elf verify` | 烧录 ELF 文件并校验 |
-| `reset run` | 复位芯片并立即运行程序（**关键**：不能用 `reset`，会挂起芯片导致程序不运行） |
-| `shutdown` | 关闭 OpenOCD 并释放调试资源 |
-
-### 5.4 烧录成功标志
-
-```
-** Programming Started **
-** Programming Finished **
-** Verify Started **
-** Verified OK **
-** Resetting Target **
-```
+> **关键**：必须用 `reset run` 而非 `reset`，否则烧录后 MCU 处于 halt 状态，程序不运行。
 
 ---
 
-## 6. VSCode 操作指南
-
-### 6.1 安装 VSCode 扩展
-
-打开项目后，VSCode 右下角会弹出提示安装推荐扩展，包括：
-
-| 扩展 | ID | 用途 |
-|------|-----|------|
-| **Cortex-Debug** | `marus25.cortex-debug` | 🔴 **必须** - 提供调试/烧录 UI 按钮（F5） |
-| **CMake Tools** | `ms-vscode.cmake-tools` | 提供编译 UI 按钮（Ctrl+Shift+B） |
-| **C/C++** | `ms-vscode.cpptools` | 代码智能提示 |
-
-### 6.2 编译
-
-| 方式 | 操作 |
-|------|------|
-| **UI 按钮** | 点击 VSCode 底部状态栏的 `▶️ Build` 按钮 |
-| **快捷键** | `Ctrl+Shift+B` → 选择 `CMake: Build` |
-| **命令面板** | `Ctrl+Shift+P` → `Tasks: Run Task` → `CMake: Build` |
-
-### 6.3 烧录
-
-| 方式 | 操作 |
-|------|------|
-| **UI 按钮** | 点击 VSCode 左侧 `运行和调试` 图标 → 选择 `Flash Only (OpenOCD)` → 点击 `▶️` 按钮 |
-| **快捷键** | `Ctrl+Shift+P` → `Tasks: Run Task` → `Flash: OpenOCD` |
-
-### 6.4 调试
-
-| 方式 | 操作 |
-|------|------|
-| **UI 按钮** | 点击 VSCode 左侧 `运行和调试` 图标 → 选择 `STM32 Debug (OpenOCD)` → 点击 `▶️` 按钮 |
-| **快捷键** | `F5` |
-
----
-
-## 7. 常见问题排查
+## 6. 常见问题排查
 
 ### Q1: CMake 找不到编译器
-```
--- The C compiler identification is unknown
-```
-**解决**：确保 `arm-none-eabi-gcc` 在 PATH 中，或在 `settings.json` 中指定完整路径。
+确保 `arm-none-eabi-gcc` 在 PATH 中，或在 `settings.json` 中指定完整路径。
 
 ### Q2: OpenOCD 无法连接
-```
-Error: open failed
-```
-**解决**：
-- 检查 ST-Link 是否已连接
-- 检查驱动是否安装
-- 检查 SWD 接线是否正确
-- 尝试降低 `adapter speed`
+检查 ST-Link 驱动、SWD 接线，尝试降低 `adapter speed`。
 
-### Q3: 编译报错 "undefined reference to"
-**解决**：检查 `CMakeLists.txt` 中的 `include_directories` 和源文件路径是否正确。
+### Q3: 新增 .c 文件后链接报 `undefined reference`
+**根因**：`file(GLOB_RECURSE)` 在 CMake 配置时缓存了文件列表，**新增 .c 文件不会自动被检测到**。
 
-### Q4: 芯片型号不同
-**解决**：修改 `CMakeLists.txt` 中的以下内容：
-- `-mcpu=` 参数
-- `-DSTM32F427xx` 宏定义
-- 链接脚本文件名
-- `stlink.cfg` 中的 `target/xxx.cfg`
+**解决**：**必须重新执行 `cmake -B build`** 让 CMake 重新扫描源文件，再编译。
 
-### Q5: 没有调试/烧录 UI 按钮
-**解决**：
-- 确保已安装 **Cortex-Debug** 扩展 (`marus25.cortex-debug`)
-- 确保 `.vscode/launch.json` 文件存在且配置正确
-- 按 `Ctrl+Shift+P` → `Developer: Reload Window` 重新加载
+### Q4: 中文路径导致 objcopy 失败
+Windows 中文路径（如 `测试`）可能被 Ninja 编码错误，导致 `.hex`/`.bin` 生成失败。**`.elf` 链接成功即可使用，不影响调试/烧录**。
+
+### Q5: 烧录后不运行，完全断电才恢复
+烧录命令必须用 `reset run` + `shutdown`，不能用 `reset exit`（halt MCU）。
 
 ---
 
-## 8. 一键脚本
-
-将以下内容保存为 `build_and_flash.ps1`，放在项目根目录：
-
-```powershell
-# build_and_flash.ps1 - 一键编译并烧录
-param(
-    [string]$BuildType = "Debug"
-)
-
-# 设置环境变量
-$ToolchainPath = "D:\DevEnv\GNU-tools-for-STM32\bin"
-$CMakePath = "D:\DevEnv\BuildTools\CMake\bin"
-$NinjaPath = "D:\DevEnv\BuildTools\Ninja"
-$OpenOCDPath = "D:\DevEnv\Debuggers\OpenOCD\bin"
-$env:PATH = "$ToolchainPath;$CMakePath;$NinjaPath;$OpenOCDPath;$env:PATH"
-
-$ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-Set-Location $ProjectDir
-
-Write-Host "=== 1. CMake 配置 ===" -ForegroundColor Cyan
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BuildType
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "=== 2. 编译 ===" -ForegroundColor Cyan
-cmake --build build
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "=== 3. 烧录 ===" -ForegroundColor Cyan
-openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "init; halt; program build/dart_mcu.elf verify; reset run; shutdown"
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "=== ✅ 完成! ===" -ForegroundColor Green
-```
-
----
-
-## 9. 参考项目
-
-- 参考项目路径：`D:\robomaster\CH\madio\dart-ros2-workspace\src\dart_mcu`
-- 该项目的 `CMakeLists.txt` 还包含 micro-ROS 集成，可作为进阶参考
+## 7. 参考项目
+- `D:\robomaster\CH\madio\dart-ros2-workspace\src\dart_mcu`
